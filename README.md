@@ -84,7 +84,7 @@ mount /dev/sda1 /media/usb/
 dd bs=512 count=4 if=/dev/random of=/media/usb/unlock.key iflag=fullblock
 ```
 
-Partition the target SSD with 2 partitions (Arch's install guide has a [section on partitioning](https://wiki.archlinux.org/title/Installation_guide):
+Partition the target SSD with 2 partitions (Arch's install guide has a [section on partitioning](https://wiki.archlinux.org/title/Installation_guide)):
 
 * 512MiB boot: `/dev/nvme0n1p1`
 * Remaining space for root: `/dev/nvme0n1p2`
@@ -98,7 +98,8 @@ mkfs.vfat -F 32 /dev/nvme0n1p1
 Decide on your `--pbkdf-*` parameters:
 
 > By default cryptsetup will [benchmark](https://man7.org/linux/man-pages/man8/cryptsetup-luksformat.8.html) your host and use a memory-hard PBKDF algorithm that can require up to 4GB of RAM. If these settings exceed your Raspberry Pi's available RAM, it will make it impossible to unlock the partition. To work around this, set the [--pbkdf-memory](https://man7.org/linux/man-pages/man8/cryptsetup-luksformat.8.html) and [--pbkdf-parallel](https://man7.org/linux/man-pages/man8/cryptsetup-luksformat.8.html) arguments so when you multiply them, the result is less than your Pi's total RAM.
-> From the excellent [Pi Encrypted Boot with Remote SSH](https://github.com/ViRb3/pi-encrypted-boot-ssh) guide.
+
+-- from the excellent [Pi Encrypted Boot with Remote SSH](https://github.com/ViRb3/pi-encrypted-boot-ssh) guide.
 
 Setup luks and format root partition:
 
@@ -185,7 +186,7 @@ pacman -R linux-aarch64 uboot-raspberrypi
 pacman -Syu --overwrite "/boot/*" linux-rpi-16k
 
 # Some packages provide hints on actions to take and you'll have to decide which ones need attention.
-# mkinitcpio probably failed, we'll fix soon.
+# mkinitcpio probably failed, we'll fix that soon.
 ```
 
 Update your [Localization](https://wiki.archlinux.org/title/Installation_guide#Localization):
@@ -207,6 +208,12 @@ Generate locales:
 
 ```bash
 locale-gen
+```
+
+Update your [time zone](https://wiki.archlinux.org/title/System_time#Time_zone)
+
+```bash
+ln -sf /usr/share/zoneinfo/Region/City /etc/localtime
 ```
 
 Update [mkinitcpio hooks](https://wiki.archlinux.org/title/Dm-crypt/Encrypting_an_entire_system#LUKS_on_a_partition):
@@ -232,7 +239,7 @@ UUID=cccccccc-cccc-cccc-cccc-cccccccccccc / ext4 rw,relatime 0 1
 UUID=aaaa-aaaa /boot vfat rw,relatime 0 0
 ```
 
-Update linux command line:
+Update linux command line by replacing `root=/dev/mmcblk0p2`:
 
 ```bash
 vi /boot/cmdline.txt
@@ -240,7 +247,7 @@ vi /boot/cmdline.txt
 # Replace root=/dev/mmcblk0p2 with this (and update the cryptkey file system parameter, ext4, to the file system of your usb key):
 cryptdevice=UUID=bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb:root cryptkey=UUID=dddddddd-dddd-dddd-dddd-dddddddddddd:ext4:/unlock.key root=/dev/mapper/root
 
-# Should look something like this:
+# Full line should look something like this:
 cryptdevice=UUID=bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb:root cryptkey=UUID=dddddddd-dddd-dddd-dddd-dddddddddddd:ext4:/unlock.key root=/dev/mapper/root rw rootwait console=serial0,115200 console=tty1 fsck.repair=yes
 ```
 
@@ -315,6 +322,8 @@ Real life steps:
 1. Wait
 1. Connect to your Pi using SSH as root
 
+Enjoy!
+
 ## Troubleshooting
 
 Unfortunately, plugging the Pi into a monitor and looking at the screen is the easiest debug method.
@@ -325,7 +334,7 @@ Still nothing?
 
 Power off, insert the SD card into the Pi, boot and SSH. Unlock and mount partitions then enter the chroot and start pressing buttons. Double check your UUID's and `cmdline.txt`. Perhaps you missed the `UUID=` when referencing the disk?
 
-Maybe you'll need to remove the `kms` minitcpio HOOK. Maybe you'll need to disable `vc4-kms-v3d` in the `config.txt`.
+Maybe you'll need to remove the `kms` minitcpio HOOKS. Maybe you'll need to disable `vc4-kms-v3d` in the `config.txt`.
 
 ## Miscellaneous Notes
 
