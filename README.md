@@ -1,10 +1,19 @@
 # Raspberry Pi 5 with Arch Linux ARM and Encrypted Root
 
-Until our Raspberry Pi 5 is fully supported by [Arch Linux ARM](https://archlinuxarm.org/platforms) we can get it running by "... removing U-Boot and replacing the mainline kernel with a directly booting kernel from the Raspberry Pi foundation" - from [this excellent guide](https://kiljan.org/2023/11/24/arch-linux-arm-on-a-raspberry-pi-5-model-b/) which you should read first.
+Until our Raspberry Pi 5 is fully supported by [Arch Linux ARM](https://archlinuxarm.org/platforms) we can get it running by "... removing U-Boot and replacing the mainline kernel with a directly booting kernel from the Raspberry Pi foundation". --[source](https://kiljan.org/2023/11/24/arch-linux-arm-on-a-raspberry-pi-5-model-b/)
 
-This guide boots an encrypted root Arch Linux ARM on an SSD connected to a Raspberry Pi 5. Root is automatically unlocked from a key file on a USB key or you can enter the password with a keyboard. While it's not covered here, adding unlock via SSH should be the same as any other Arch install. Hopefully.
+This guide boots an encrypted root Arch Linux ARM on an SSD connected to a Raspberry Pi 5. The root partition is automatically unlocked from a key file on a USB key or you can enter the password with a keyboard. While it's not covered here, adding unlock via SSH should be the same as any other Arch install. Hopefully.
 
-If you're looking for a guide to install to a SD card instead of the SSD, try the aforementioned guide above or see the incomplete notes at the end for trying to build in a host that's not a Pi.
+If you're looking for a guide to install to a SD card instead of the SSD you could try the incomplete notes section at the end of this file to build on a host that's not a Pi.
+
+Tested with `ArchLinuxARM-rpi-aarch64-latest.tar.gz` from 2024-03-27.
+
+## Inspiration
+
+These excellent guides:
+
+* [Arch Linux ARM on a Raspberry Pi 5 Model B](https://kiljan.org/2023/11/24/arch-linux-arm-on-a-raspberry-pi-5-model-b/)
+* [Pi Encrypted Boot with Remote SSH](https://github.com/ViRb3/pi-encrypted-boot-ssh) (Raspberry Pi OS Lite)
 
 ## Hardware
 
@@ -45,7 +54,7 @@ BOOT_ORDER=0xf416
 PCIE_PROBE=1
 ```
 
-For the [lowest power state on halt](https://www.raspberrypi.com/documentation/computers/raspberry-pi.html#POWER_OFF_ON_HALT) because my Pi doesn't have a HAT and doesn't use GPIO pins:
+(**Optional**) For the [lowest power state on halt](https://www.raspberrypi.com/documentation/computers/raspberry-pi.html#POWER_OFF_ON_HALT) because my Pi doesn't have a HAT and doesn't use GPIO pins:
 
 ```
 POWER_OFF_ON_HALT=1
@@ -97,9 +106,7 @@ mkfs.vfat -F 32 /dev/nvme0n1p1
 
 Decide on your `--pbkdf-*` parameters:
 
-> By default cryptsetup will [benchmark](https://man7.org/linux/man-pages/man8/cryptsetup-luksformat.8.html) your host and use a memory-hard PBKDF algorithm that can require up to 4GB of RAM. If these settings exceed your Raspberry Pi's available RAM, it will make it impossible to unlock the partition. To work around this, set the [--pbkdf-memory](https://man7.org/linux/man-pages/man8/cryptsetup-luksformat.8.html) and [--pbkdf-parallel](https://man7.org/linux/man-pages/man8/cryptsetup-luksformat.8.html) arguments so when you multiply them, the result is less than your Pi's total RAM.
-
--- from the excellent [Pi Encrypted Boot with Remote SSH](https://github.com/ViRb3/pi-encrypted-boot-ssh) guide.
+> By default cryptsetup will [benchmark](https://man7.org/linux/man-pages/man8/cryptsetup-luksformat.8.html) your host and use a memory-hard PBKDF algorithm that can require up to 4GB of RAM. If these settings exceed your Raspberry Pi's available RAM, it will make it impossible to unlock the partition. To work around this, set the [--pbkdf-memory](https://man7.org/linux/man-pages/man8/cryptsetup-luksformat.8.html) and [--pbkdf-parallel](https://man7.org/linux/man-pages/man8/cryptsetup-luksformat.8.html) arguments so when you multiply them, the result is less than your Pi's total RAM. --[source](https://github.com/ViRb3/pi-encrypted-boot-ssh)
 
 Setup luks and format root partition:
 
@@ -189,7 +196,7 @@ pacman -Syu --overwrite "/boot/*" linux-rpi-16k
 # mkinitcpio probably failed, we'll fix that soon.
 ```
 
-Update your [Localization](https://wiki.archlinux.org/title/Installation_guide#Localization):
+Update your [localization](https://wiki.archlinux.org/title/Installation_guide#Localization) otherwise mkinitcpio fails:
 
 ```bash
 vi /etc/locale.gen
@@ -210,7 +217,7 @@ Generate locales:
 locale-gen
 ```
 
-Update your [time zone](https://wiki.archlinux.org/title/System_time#Time_zone)
+You might as well update your [time zone](https://wiki.archlinux.org/title/System_time#Time_zone) while you're here:
 
 ```bash
 ln -sf /usr/share/zoneinfo/Region/City /etc/localtime
@@ -246,17 +253,20 @@ vi /boot/cmdline.txt
 
 # Replace root=/dev/mmcblk0p2 with this (and update the cryptkey file system parameter, ext4, to the file system of your usb key):
 cryptdevice=UUID=bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb:root cryptkey=UUID=dddddddd-dddd-dddd-dddd-dddddddddddd:ext4:/unlock.key root=/dev/mapper/root
+```
 
-# Full line should look something like this:
+Your full command line should look something like this:
+
+```
 cryptdevice=UUID=bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb:root cryptkey=UUID=dddddddd-dddd-dddd-dddd-dddddddddddd:ext4:/unlock.key root=/dev/mapper/root rw rootwait console=serial0,115200 console=tty1 fsck.repair=yes
 ```
 
-Update Pi's configuration (optional):
+**(Optional)** Update Pi's configuration:
 
 ```
 vi /boot/config.txt
 
-# I disable things I don't need:
+# I'll be disabling things I don't need:
 # - vc4-kms-v3d (try disable this if your Pi freezes on boot)
 # - wifi
 # - bluetooth
@@ -281,21 +291,21 @@ echo "ssh-ed25519 [...]" | tee /root/.ssh/authorized_keys
 chmod 0600 /root/.ssh/authorized_keys
 ```
 
-Remove default (insecure) user and disable root's password because we'll be using SSH to connect (optional):
+(**Optional**) My Pi will be headless so I'll remove the default user that has an obvious password and disable root's password because I'll only be connecting via SSH:
 
 ```bash
 userdel -r alarm
 usermod -p '!' root
 ```
 
-Periodic pacman cache cleaner (optional):
+(**Optional**) Periodic pacman [cache cleaner](https://wiki.archlinux.org/title/Pacman#Cleaning_the_package_cache):
 
 ```bash
 pacman -S pacman-contrib
 systemctl enable paccache.timer
 ```
 
-Update your hostname:
+(**Optional**) Update your [hostname](https://wiki.archlinux.org/title/Network_configuration#Set_the_hostname):
 
 ```bash
 vi /etc/hostname
@@ -308,7 +318,7 @@ sync
 history -c && exit
 ```
 
-Power off the Pi:
+Power off the Pi which is easier than unmounting all the file systems by hand:
 
 ```
 poweroff
@@ -323,6 +333,14 @@ Real life steps:
 1. Connect to your Pi using SSH as root
 
 Enjoy!
+
+## Future
+
+> "When Arch Linux ARM starts supporting the Pi 5, the Pi Foundation’s kernel can be replaced with the mainline kernel by running: `pacman -Syu linux-aarch64 uboot-raspberrypi`
+>
+> There will be warning that those packages conflict with package `linux-rpi` and whether you want it replaced. If you do, `linux-rpi` will be removed before installing the new packages. After that, your Arch Linux ARM installation should be the same as the official Arch Linux ARM Raspberry Pi image that supports the Pi 5."
+
+--[source](https://kiljan.org/2023/11/24/arch-linux-arm-on-a-raspberry-pi-5-model-b/)
 
 ## Troubleshooting
 
