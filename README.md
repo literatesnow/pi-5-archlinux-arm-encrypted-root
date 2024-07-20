@@ -50,7 +50,7 @@ Edit EEPROM:
 ```bash
 rpi-eeprom-config --edit
 
-BOOT_ORDER=0xf416
+BOOT_ORDER=0xf461
 PCIE_PROBE=1
 ```
 
