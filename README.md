@@ -261,6 +261,15 @@ Your full command line should look something like this:
 cryptdevice=UUID=bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb:root cryptkey=UUID=dddddddd-dddd-dddd-dddd-dddddddddddd:ext4:/unlock.key root=/dev/mapper/root rw rootwait console=serial0,115200 console=tty1 fsck.repair=yes
 ```
 
+It is mandatory to set the kernel order `root=/dev/mmcblk0p2`:
+
+```bash
+vi /boot/config.txt
+
+# prepend at the beginning:
+initramfs initramfs-linux.img follow-kernel
+```
+
 **(Optional)** Update Pi's configuration:
 
 ```
